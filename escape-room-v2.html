@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방탈출 카페 - 살인마의 암실</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Popup Overlay */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-overlay.active {
+            display: flex;
+        }
+
+        .popup {
+            background: #1a1a1a;
+            border: 3px solid #ffff00;
+            border-radius: 10px;
+            padding: 40px;
+            max-width: 700px;
+            color: #fff;
+            animation: popupIn 0.4s ease-out;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.5);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes popupIn {
+            from {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .popup h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #ffff00;
+            text-align: center;
+        }
+
+        .popup-content {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            background: #333;
+            border: 2px solid #666;
+            color: #fff;
+            border-radius: 5px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #ffff00;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .submit-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            background: #00aa00;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #00dd00;
+        }
+
+        .cancel-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            background: #666;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .cancel-btn:hover {
+            background: #888;
+        }
+
+        .error-message {
+            color: #ff4444;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .success-message {
+            color: #44ff44;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .hint-box {
+            background: #2a2a2a;
+            border-left: 3px solid #ffaa00;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 3px;
+        }
+
+        .hint-box strong {
+            color: #ffaa00;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin: 15px 0;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #333;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .calendar-day.marked {
+            background: #ff0000;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .dial-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .dial {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dial-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffff00;
+            width: 50px;
+            text-align: center;
+            height: 30px;
+            line-height: 30px;
+            background: #222;
+            border: 2px solid #666;
+            border-radius: 3px;
+        }
+
+        .dial-btn {
+            padding: 5px 10px;
+            font-size: 14px;
+            background: #333;
+            border: 1px solid #666;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 3px;
+            width: 50px;
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 250px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .numpad button {
+            aspect-ratio: 1;
+            font-size: 20px;
+            font-weight: bold;
+            background: #333;
+            border: 2px solid #666;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .numpad button:hover {
+            background: #555;
+            border-color: #ffff00;
+        }
+
+        .numpad button:active {
+            transform: scale(0.9);
+        }
+
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .keyboard button {
+            padding: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            background: #333;
+            border: 2px solid #666;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .keyboard button:hover {
+            background: #555;
+            border-color: #ffff00;
+        }
+
+        .periodic-table {
+            background: #222;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .periodic-table div {
+            margin: 5px 0;
+            padding: 5px;
+            background: #333;
+            border-radius: 3px;
+        }
+
+        .timer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4444;
+            text-shadow: 0 0 10px #ff4444;
+            z-index: 150;
+        }
+
+        .ending-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+            z-index: 400;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .ending-screen.active {
+            display: flex;
+        }
+
+        .ending-text {
+            font-size: 60px;
+            color: #44ff44;
+            font-weight: bold;
+            text-shadow: 0 0 20px #44ff44;
+            margin-bottom: 40px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.3; }
+        }
+
+        .ending-button {
+            padding: 20px 40px;
+            font-size: 24px;
+            border: 2px solid #44ff44;
+            background: transparent;
+            color: #44ff44;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .ending-button:hover {
+            background: #44ff44;
+            color: #000;
+            box-shadow: 0 0 20px #44ff44;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="timer" id="timer"></div>
+    
+    <div id="popupOverlay" class="popup-overlay">
+        <div id="popup" class="popup"></div>
+    </div>
+
+    <div id="endingScreen" class="ending-screen">
+        <div class="ending-text" id="endingText">🎉 탈출 성공! 🎉</div>
+        <button class="ending-button" onclick="location.reload()">다시 시작</button>
+    </div>
+
+    <script>
+        // ============================================
+        // GAME STATE & CONFIG
+        // ============================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gameState = {
+            scene: 'TITLE',
+            uvMode: false,
+            timeRemaining: 600, // 10분
+            gameStartTime: null,
+            solvedPuzzles: {
+                pc: false,
+                cabinet: false,
+                safe: false,
+                door: false
+            },
+            obtainedItems: {
+                pcDocument: false,
+                cabinetMemo: false,
+                safeKey: false,
+                photoEvidence: []
+            }
+        };
+
+        // ============================================
+        // DRAWING FUNCTIONS - TITLE SCENE
+        // ============================================
+        function drawTitleScene() {
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#0a0a0a');
+            bgGrad.addColorStop(1, '#1a1a1a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Neon sign effect
+            ctx.shadowColor = '#ff00ff';
+            ctx.shadowBlur = 40;
+            ctx.fillStyle = '#ff00ff';
+            ctx.font = 'bold 100px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('방탈출 카페', canvas.width / 2, 150);
+            ctx.shadowBlur = 0;
+
+            // Counter visual
+            ctx.fillStyle = '#5a4a3a';
+            ctx.fillRect(canvas.width / 2 - 200, 300, 400, 150);
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(canvas.width / 2 - 200, 300, 400, 150);
+
+            // Menu buttons
+            const buttons = [
+                { y: 400, text: '[테마 입장]' },
+                { y: 480, text: '[환경설정]' },
+                { y: 560, text: '[퇴근]' }
+            ];
+
+            buttons.forEach(btn => {
+                ctx.fillStyle = '#fff';
+                ctx.font = '28px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(btn.text, canvas.width / 2, btn.y);
+            });
+
+            window.buttonCoords = buttons.map((btn, i) => ({
+                x: canvas.width / 2 - 100,
+                y: btn.y - 30,
+                w: 200,
+                h: 50,
+                action: i === 0 ? 'THEME_SELECT' : i === 1 ? 'SETTINGS' : 'EXIT'
+            }));
+        }
+
+        // ============================================
+        // DRAWING FUNCTIONS - THEME SELECT SCENE
+        // ============================================
+        function drawThemeSelectScene() {
+            const bgGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            bgGrad.addColorStop(0, '#0a0a0a');
+            bgGrad.addColorStop(1, '#2a2a2a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Wall texture
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#ffff00';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('테마 선택', canvas.width / 2, 80);
+
+            // Posters
+            const posters = [
+                { x: 250, y: 300, locked: false, title: '살인마의 암실', case: '01' },
+                { x: canvas.width / 2, y: 300, locked: true, title: '????', case: '02' },
+                { x: canvas.width - 250, y: 300, locked: true, title: '????', case: '03' }
+            ];
+
+            posters.forEach((poster, idx) => {
+                ctx.save();
+                const frameColor = poster.locked ? '#666' : '#ffff00';
+                ctx.strokeStyle = frameColor;
+                ctx.lineWidth = 3;
+                ctx.fillStyle = poster.locked ? '#333' : '#222';
+                ctx.fillRect(poster.x - 80, poster.y - 120, 160, 240);
+                ctx.strokeRect(poster.x - 80, poster.y - 120, 160, 240);
+
+                if (poster.locked) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.fillRect(poster.x - 80, poster.y - 120, 160, 240);
+                } else {
+                    ctx.shadowColor = '#ff0000';
+                    ctx.shadowBlur = 20;
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                    ctx.fillRect(poster.x - 80, poster.y - 120, 160, 240);
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fillStyle = poster.locked ? '#666' : '#ffff00';
+                ctx.font = 'bold 28px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Case ' + poster.case, poster.x, poster.y - 80);
+                ctx.font = '14px Arial';
+                ctx.fillStyle = poster.locked ? '#555' : '#fff';
+                ctx.fillText(poster.title, poster.x, poster.y + 80, 160);
+
+                ctx.restore();
+            });
+
+            window.posterCoords = posters;
+        }
+
+        // ============================================
+        // DRAWING FUNCTIONS - MAIN GAME SCENE
+        // ============================================
+        function drawMainGameScene() {
+            // Room background
+            drawRoomBackground();
+            drawRoomObjects();
+        }
+
+        function drawRoomBackground() {
+            const ceilingColor = gameState.uvMode ? '#1a1a3a' : '#3a3a2a';
+            const wallColor = gameState.uvMode ? '#0a0a2a' : '#2a2416';
+            const floorColor = gameState.uvMode ? '#05051a' : '#1a1a10';
+
+            // Ceiling
+            const ceilingGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            ceilingGrad.addColorStop(0, '#1a1a1a');
+            ceilingGrad.addColorStop(0.5, ceilingColor);
+            ceilingGrad.addColorStop(1, '#1a1a1a');
+            ctx.fillStyle = ceilingGrad;
+            ctx.fillRect(0, 0, canvas.width, 80);
+
+            // Walls
+            const wallGrad = ctx.createLinearGradient(0, 80, 0, canvas.height * 0.7);
+            wallGrad.addColorStop(0, 'rgba(255, 255, 255, 0.02)');
+            wallGrad.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+            ctx.fillStyle = wallColor;
+            ctx.fillRect(0, 80, canvas.width, canvas.height * 0.6);
+            ctx.fillStyle = wallGrad;
+            ctx.fillRect(0, 80, canvas.width, canvas.height * 0.6);
+
+            // Floor
+            ctx.fillStyle = floorColor;
+            ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.height * 0.3; i += 15) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height * 0.7 + i);
+                ctx.lineTo(canvas.width, canvas.height * 0.7 + i);
+                ctx.stroke();
+            }
+        }
+
+        function drawRoomObjects() {
+            // Cabinet (좌측)
+            drawCabinet();
+            // PC Desk (중앙)
+            drawPCDesk();
+            // Calendar
+            drawCalendar();
+            // Light Switch
+            drawLightSwitch();
+            // Safe (우측)
+            drawSafe();
+            // Door
+            drawDoor();
+            // Photos
+            drawPhotos();
+            // Magic square (UV모드)
+            if (gameState.uvMode) {
+                drawMagicSquare();
+            }
+
+            // UI
+            ctx.fillStyle = gameState.uvMode ? '#00ff00' : '#ffaa00';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('💡 ' + (gameState.uvMode ? 'UV 블랙라이트' : '적색등'), 20, 30);
+            ctx.fillText('🔓 풀린 퍼즐: ' + Object.values(gameState.solvedPuzzles).filter(v => v).length + '/4', 20, 60);
+        }
+
+        function drawCabinet() {
+            const x = 100, y = 180;
+            const cabinetGrad = ctx.createLinearGradient(x, y, x + 120, y);
+            cabinetGrad.addColorStop(0, '#5a5a5a');
+            cabinetGrad.addColorStop(0.5, '#3a3a3a');
+            cabinetGrad.addColorStop(1, '#2a2a2a');
+            ctx.fillStyle = cabinetGrad;
+            ctx.fillRect(x, y, 120, 200);
+            
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, 120, 200);
+
+            // Shelves
+            for (let i = 1; i < 4; i++) {
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x + 5, y + (200 / 4) * i);
+                ctx.lineTo(x + 115, y + (200 / 4) * i);
+                ctx.stroke();
+            }
+
+            const lockColor = gameState.solvedPuzzles.cabinet ? '#00ff00' : '#ff0000';
+            ctx.fillStyle = lockColor;
+            ctx.beginPath();
+            ctx.arc(x + 60, y + 100, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowColor = lockColor;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowColor = 'transparent';
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('화학약품 캐비닛', x + 60, y + 240);
+
+            window.cabinetCoords = { x, y, w: 120, h: 200 };
+        }
+
+        function drawPCDesk() {
+            const x = canvas.width / 2 - 80, y = 180;
+            
+            const deskGrad = ctx.createLinearGradient(x, y, x, y + 120);
+            deskGrad.addColorStop(0, '#6a5a4a');
+            deskGrad.addColorStop(1, '#4a3a2a');
+            ctx.fillStyle = deskGrad;
+            ctx.fillRect(x, y, 160, 120);
+            
+            ctx.strokeStyle = '#3a3a2a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, 160, 120);
+
+            // Monitor
+            ctx.fillStyle = '#222';
+            ctx.fillRect(x + 20, y + 10, 120, 85);
+            
+            const pcStatus = gameState.solvedPuzzles.pc ? '#00ff00' : '#ff0000';
+            ctx.fillStyle = pcStatus;
+            ctx.globalAlpha = 0.15;
+            ctx.fillRect(x + 25, y + 15, 110, 70);
+            ctx.globalAlpha = 1;
+            
+            ctx.strokeStyle = pcStatus;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 25, y + 15, 110, 70);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('낡은 PC', x + 100, y + 130);
+
+            window.pcCoords = { x: x + 20, y: y + 10, w: 120, h: 85 };
+        }
+
+        function drawCalendar() {
+            const x = canvas.width / 2 + 120, y = 180;
+            ctx.fillStyle = '#4a4a3a';
+            ctx.fillRect(x, y, 80, 120);
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, 80, 120);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('4월 21일', x + 40, y + 30);
+            ctx.fillText('D-17', x + 40, y + 60);
+
+            window.calendarCoords = { x, y, w: 80, h: 120 };
+        }
+
+        function drawLightSwitch() {
+            const x = canvas.width / 2, y = 450;
+            
+            ctx.fillStyle = '#444';
+            ctx.fillRect(x - 25, y - 5, 50, 70);
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 25, y - 5, 50, 70);
+            
+            const switchBg = gameState.uvMode ? '#003366' : '#663333';
+            ctx.fillStyle = switchBg;
+            ctx.fillRect(x - 18, y + 5, 36, 50);
+            
+            const toggleColor = gameState.uvMode ? '#0055ff' : '#ff4444';
+            ctx.fillStyle = toggleColor;
+            const toggleY = gameState.uvMode ? y + 30 : y + 10;
+            
+            ctx.fillRect(x - 12, toggleY, 24, 18);
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 12, toggleY, 24, 18);
+            
+            ctx.shadowColor = toggleColor;
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+            ctx.shadowColor = 'transparent';
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('조명', x, y - 15);
+            ctx.fillText('스위치', x, y + 70);
+
+            window.switchCoords = { x: x - 25, y: y - 5, w: 50, h: 70 };
+        }
+
+        function drawSafe() {
+            const x = canvas.width - 220, y = 180;
+            
+            const safeGrad = ctx.createLinearGradient(x, y, x + 100, y + 150);
+            safeGrad.addColorStop(0, '#4a4a4a');
+            safeGrad.addColorStop(1, '#1a1a1a');
+            ctx.fillStyle = safeGrad;
+            ctx.fillRect(x, y, 100, 150);
+
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, 100, 150);
+
+            ctx.fillStyle = '#aa8800';
+            ctx.fillRect(x + 85, y + 60, 8, 30);
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath();
+            ctx.arc(x + 89, y + 75, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            const dialColor = gameState.solvedPuzzles.safe ? '#00ff00' : '#ff0000';
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath();
+            ctx.arc(x + 50, y + 50, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#888';
+            ctx.font = '9px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30) * Math.PI / 180 - Math.PI / 2;
+                const px = x + 50 + Math.cos(angle) * 22;
+                const py = y + 50 + Math.sin(angle) * 22;
+                ctx.fillText((i * 10) % 100, px, py);
+            }
+
+            ctx.strokeStyle = dialColor;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x + 50, y + 50, 28, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowColor = dialColor;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowColor = 'transparent';
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('소형 금고', x + 50, y + 130);
+
+            window.safeCoords = { x: x, y: y, w: 100, h: 150 };
+        }
+
+        function drawDoor() {
+            const x = canvas.width - 150, y = 280;
+            
+            const doorGrad = ctx.createLinearGradient(x, y, x + 100, y);
+            doorGrad.addColorStop(0, '#3a3a3a');
+            doorGrad.addColorStop(0.5, '#1a1a1a');
+            doorGrad.addColorStop(1, '#2a2a2a');
+            ctx.fillStyle = doorGrad;
+            ctx.fillRect(x, y, 100, 200);
+            
+            for (let i = 0; i < 200; i += 20) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, y + i);
+                ctx.lineTo(x + 100, y + i);
+                ctx.stroke();
+            }
+
+            const doorColor = gameState.solvedPuzzles.door ? '#00ff00' : '#ff0000';
+            ctx.strokeStyle = doorColor;
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, 100, 200);
+            
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 3, y + 3, 94, 194);
+
+            ctx.fillStyle = '#222';
+            ctx.fillRect(x + 10, y + 20, 80, 40);
+            ctx.strokeStyle = doorColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 10, y + 20, 80, 40);
+            
+            ctx.fillStyle = doorColor;
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(gameState.solvedPuzzles.door ? 'UNLOCKED' : 'LOCKED', x + 50, y + 40);
+
+            ctx.fillStyle = '#ccaa00';
+            ctx.beginPath();
+            ctx.arc(x + 80, y + 100, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowColor = '#ffff00';
+            ctx.shadowBlur = 8;
+            ctx.stroke();
+            ctx.shadowColor = 'transparent';
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬆ 탈출문 ⬆', x + 50, y + 230);
+
+            window.doorCoords = { x, y, w: 100, h: 200 };
+        }
+
+        function drawPhotos() {
+            const positions = [
+                { x: 250, y: 420 },
+                { x: canvas.width / 2, y: 420 },
+                { x: canvas.width - 250, y: 420 }
+            ];
+            
+            const labels = gameState.uvMode ? ['As', 'Hg', 'Tl'] : ['사진 1', '사진 2', '사진 3'];
+
+            positions.forEach((pos, idx) => {
+                ctx.fillStyle = '#8a7a6a';
+                ctx.fillRect(pos.x - 35, pos.y - 35, 70, 70);
+                
+                ctx.strokeStyle = '#aaa';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(pos.x - 35, pos.y - 35, 70, 70);
+                
+                ctx.fillStyle = '#5a5a4a';
+                ctx.fillRect(pos.x - 30, pos.y - 30, 60, 60);
+                
+                ctx.fillStyle = gameState.uvMode ? '#00ff00' : '#4a4a3a';
+                for (let i = 0; i < 60; i += 10) {
+                    ctx.fillRect(pos.x - 30 + i, pos.y - 30, 5, 60);
+                }
+                
+                ctx.strokeStyle = '#777';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(pos.x - 30, pos.y - 30, 60, 60);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(labels[idx], pos.x, pos.y + 45);
+            });
+
+            window.photoCoords = positions;
+        }
+
+        function drawMagicSquare() {
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+
+            const startX = canvas.width / 2 - 75;
+            const startY = 200;
+            const square = [
+                [8, '', 6],
+                [3, 5, 7],
+                [4, 9, 2]
+            ];
+
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const x = startX + j * 50;
+                    const y = startY + i * 50;
+                    ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, 50, 50);
+                    
+                    if (square[i][j] !== '') {
+                        ctx.fillText(square[i][j], x + 25, y + 35);
+                    }
+                }
+            }
+        }
+
+        // ============================================
+        // PUZZLE POPUPS
+        // ============================================
+        const popupOverlay = document.getElementById('popupOverlay');
+        const popup = document.getElementById('popup');
+
+        function closePopup() {
+            popupOverlay.classList.remove('active');
+            popup.innerHTML = '';
+        }
+
+        function showPopup(content) {
+            popup.innerHTML = content;
+            popupOverlay.classList.add('active');
+        }
+
+        function showCalendarPuzzle() {
+            const content = `
+                <h2>탁상 달력</h2>
+                <div class="popup-content">
+                    2024년 4월 달력입니다. 4월 21일에 동그라미 표시가 있습니다.
+                </div>
+                <div class="hint-box">
+                    <strong>💡 힌트:</strong> 4월 21일 바로 아래에 "D-17"이라고 적혀있습니다.
+                </div>
+                <div class="popup-content">
+                    이것은 무엇을 의미하는 걸까요?
+                </div>
+                <button class="cancel-btn" onclick="closePopup()">닫기</button>
+            `;
+            showPopup(content);
+        }
+
+        function showPCPuzzle() {
+            const content = `
+                <h2>PC 로그인</h2>
+                <div class="popup-content">
+                    모니터에 비밀번호 입력 창이 떠있습니다.<br><br>
+                    💡 <strong>힌트:</strong> 달력을 참고하세요. 그리고 UV 모드에서 추가 단서가 있습니다.
+                </div>
+                <div class="input-group">
+                    <label>4자리 숫자 비밀번호:</label>
+                    <input type="text" id="pcInput" placeholder="예: 0508" maxlength="4" inputmode="numeric">
+                </div>
+                <div class="button-group">
+                    <button class="submit-btn" onclick="submitPCPassword()">확인</button>
+                    <button class="cancel-btn" onclick="closePopup()">취소</button>
+                </div>
+                <div id="pcMessage"></div>
+            `;
+            showPopup(content);
+            document.getElementById('pcInput').focus();
+        }
+
+        function submitPCPassword() {
+            const input = document.getElementById('pcInput').value;
+            
+            if (input === '0208') {
+                document.getElementById('pcMessage').innerHTML = '<div class="success-message">✓ 정답! PC가 잠금 해제되었습니다.</div>';
+                gameState.solvedPuzzles.pc = true;
+                gameState.obtainedItems.pcDocument = true;
+                setTimeout(showPCDocument, 1000);
+            } else {
+                document.getElementById('pcMessage').innerHTML = '<div class="error-message">✗ 오답입니다</div>';
+            }
+        }
+
+        function showPCDocument() {
+            const content = `
+                <h2>PC 암호화 문서</h2>
+                <div class="popup-content" style="background: #222; padding: 15px; border-radius: 5px;">
+                    <strong>"황제는 세 번의 칼에 찔려 쓰러졌다"</strong><br><br>
+                    (WRALF는 자물쇠를 풀기 위한 암호입니다)
+                </div>
+                <div class="hint-box">
+                    <strong>💡 단서:</strong> "황제는 3번 칼에 찔렸다" = 카이사르 암호 (알파벳 3칸 시프트)<br><br>
+                    W → T, R → O, A → X(원래대로), L → I, F → C<br><br>
+                    = TOXIC
+                </div>
+                <button class="cancel-btn" onclick="closePopup()">닫기</button>
+            `;
+            showPopup(content);
+        }
+
+        function showCabinetPuzzle() {
+            const content = `
+                <h2>화학약품 캐비닛</h2>
+                <div class="popup-content">
+                    5자리 알파벳 다이얼이 달려있습니다.<br><br>
+                    <strong style="color: #ff4444;">WRALF</strong> 라는 글씨가 빨간색으로 적혀있습니다.
+                </div>
+                <div class="hint-box">
+                    <strong>💡 단서:</strong> PC 문서의 "황제는 3번 칼에 찔렸다" = 카이사르 암호
+                </div>
+                <div class="input-group">
+                    <label>5자리 알파벳:</label>
+                    <input type="text" id="cabInput" placeholder="예: TOXIC" maxlength="5" style="text-transform: uppercase;">
+                </div>
+                <div class="button-group">
+                    <button class="submit-btn" onclick="submitCabinetPassword()">확인</button>
+                    <button class="cancel-btn" onclick="closePopup()">취소</button>
+                </div>
+                <div id="cabMessage"></div>
+            `;
+            showPopup(content);
+            document.getElementById('cabInput').focus();
+        }
+
+        function submitCabinetPassword() {
+            const input = document.getElementById('cabInput').value.toUpperCase();
+            
+            if (input === 'TOXIC') {
+                document.getElementById('cabMessage').innerHTML = '<div class="success-message">✓ 정답! 캐비닛이 열렸습니다.</div>';
+                gameState.solvedPuzzles.cabinet = true;
+                gameState.obtainedItems.cabinetMemo = true;
+                setTimeout(() => {
+                    closePopup();
+                    showCabinetMemo();
+                }, 1000);
+            } else {
+                document.getElementById('cabMessage').innerHTML = '<div class="error-message">✗ 오답입니다</div>';
+            }
+        }
+
+        function showCabinetMemo() {
+            const content = `
+                <h2>캐비닛 내부</h2>
+                <div class="popup-content">
+                    캐비닛에서 찢어진 피해자 사진 3장과 혼합 비율표를 발견합니다.
+                </div>
+                <div class="hint-box">
+                    <strong>독극물 배합 비율:</strong><br>
+                    비소(As) : 수은(Hg) : 탈륨(Tl) = 1 : 2 : 3
+                </div>
+                <button class="cancel-btn" onclick="closePopup()">닫기</button>
+            `;
+            showPopup(content);
+        }
+
+        function showSafePuzzle() {
+            const content = `
+                <h2>소형 금고</h2>
+                <div class="popup-content">
+                    금고 표면에 "Missing Numbers + The Sum" 이라고 적혀있습니다.<br><br>
+                    금고에는 4자리 숫자 입력창이 있습니다.
+                </div>
+                <div class="hint-box">
+                    <strong>💡 단서:</strong> UV 조명으로 벽의 마방진을 봐주세요.<br>
+                    3x3 마방진의 빈칸에 들어갈 숫자 2개와 모든 줄의 합을 입력하세요.
+                </div>
+                <p style="margin: 15px 0; text-align: center; color: #ffaa00;">
+                    <strong>마방진:</strong> 가로, 세로, 대각선의 합이 모두 같습니다.
+                </p>
+                <div class="input-group">
+                    <label>4자리 숫자 (빈칸 2개 + 합):</label>
+                    <input type="text" id="safeInput" placeholder="예: 5215" maxlength="4" inputmode="numeric">
+                </div>
+                <div class="button-group">
+                    <button class="submit-btn" onclick="submitSafePassword()">확인</button>
+                    <button class="cancel-btn" onclick="closePopup()">취소</button>
+                </div>
+                <div id="safeMessage"></div>
+            `;
+            showPopup(content);
+            document.getElementById('safeInput').focus();
+        }
+
+        function submitSafePassword() {
+            const input = document.getElementById('safeInput').value;
+            
+            if (input === '5215') {
+                document.getElementById('safeMessage').innerHTML = '<div class="success-message">✓ 정답! 금고가 열렸습니다.</div>';
+                gameState.solvedPuzzles.safe = true;
+                setTimeout(() => {
+                    closePopup();
+                    showPeriodicTable();
+                }, 1000);
+            } else {
+                document.getElementById('safeMessage').innerHTML = '<div class="error-message">✗ 오답입니다</div>';
+            }
+        }
+
+        function showPeriodicTable() {
+            const content = `
+                <h2>주기율표 조각</h2>
+                <div class="popup-content">
+                    금고 안에서 주기율표 조각을 발견했습니다.
+                </div>
+                <div class="periodic-table">
+                    <div><strong>비소 (As)</strong> - 원자번호 33</div>
+                    <div><strong>수은 (Hg)</strong> - 원자번호 80</div>
+                    <div><strong>탈륨 (Tl)</strong> - 원자번호 81</div>
+                </div>
+                <div class="hint-box">
+                    <strong>💡 기억:</strong> 캐비닛에서 본 배합 비율<br>
+                    As : Hg : Tl = 1 : 2 : 3
+                </div>
+                <button class="cancel-btn" onclick="closePopup()">닫기</button>
+            `;
+            showPopup(content);
+        }
+
+        function showDoorPuzzle() {
+            const content = `
+                <h2>철문 도어락</h2>
+                <div class="popup-content">
+                    전자식 키패드가 있습니다. 알파벳과 숫자를 조합하여 입력할 수 있습니다.<br><br>
+                    <strong>사진 뒷면의 증상 (UV 모드에서 확인)</strong>에서 독극물을 판단하세요.
+                </div>
+                <div class="hint-box">
+                    <strong>💡 최종 단서:</strong><br>
+                    사진 1 (급성중독) → As (비소)<br>
+                    사진 2 (신경이상) → Hg (수간)<br>
+                    사진 3 (호흡곤란) → Tl (탈륨)<br><br>
+                    배합 비율: 1:2:3 적용
+                </div>
+                <div class="input-group">
+                    <label>암호:</label>
+                    <input type="text" id="doorInput" placeholder="예: As33Hg160Tl243" style="text-transform: uppercase;">
+                </div>
+                <div class="button-group">
+                    <button class="submit-btn" onclick="submitDoorPassword()">확인</button>
+                    <button class="cancel-btn" onclick="closePopup()">취소</button>
+                </div>
+                <div id="doorMessage"></div>
+            `;
+            showPopup(content);
+            document.getElementById('doorInput').focus();
+        }
+
+        function submitDoorPassword() {
+            const input = document.getElementById('doorInput').value.toUpperCase();
+            
+            if (input === 'AS33HG160TL243') {
+                document.getElementById('doorMessage').innerHTML = '<div class="success-message">✓ 정답! 철문이 열렸습니다!</div>';
+                gameState.solvedPuzzles.door = true;
+                setTimeout(() => {
+                    closePopup();
+                    showEnding();
+                }, 1500);
+            } else {
+                document.getElementById('doorMessage').innerHTML = '<div class="error-message">✗ 오답입니다</div>';
+            }
+        }
+
+        // ============================================
+        // TIMER & ENDING
+        // ============================================
+        function updateTimer() {
+            const timerEl = document.getElementById('timer');
+            
+            if (gameState.gameStartTime === null && gameState.scene === 'MAIN_GAME') {
+                gameState.gameStartTime = Date.now();
+            }
+
+            if (gameState.gameStartTime !== null) {
+                const elapsed = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
+                gameState.timeRemaining = Math.max(0, 600 - elapsed);
+
+                const minutes = Math.floor(gameState.timeRemaining / 60);
+                const seconds = gameState.timeRemaining % 60;
+                timerEl.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                if (gameState.timeRemaining === 0) {
+                    showGameOver();
+                }
+            }
+        }
+
+        function showEnding() {
+            document.getElementById('endingScreen').classList.add('active');
+            document.getElementById('endingText').textContent = '🎉 탈출 성공! 🎉';
+        }
+
+        function showGameOver() {
+            document.getElementById('endingScreen').classList.add('active');
+            document.getElementById('endingText').textContent = '⏰ 실패: 시간 초과';
+        }
+
+        // ============================================
+        // MOUSE INTERACTION
+        // ============================================
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (gameState.scene === 'TITLE') {
+                window.buttonCoords?.forEach(btn => {
+                    if (x > btn.x && x < btn.x + btn.w && y > btn.y && y < btn.y + btn.h) {
+                        if (btn.action === 'THEME_SELECT') {
+                            gameState.scene = 'THEME_SELECT';
+                        }
+                    }
+                });
+            } else if (gameState.scene === 'THEME_SELECT') {
+                window.posterCoords?.forEach((poster, idx) => {
+                    if (!poster.locked && 
+                        x > poster.x - 80 && x < poster.x + 80 &&
+                        y > poster.y - 120 && y < poster.y + 120) {
+                        gameState.scene = 'MAIN_GAME';
+                    }
+                });
+            } else if (gameState.scene === 'MAIN_GAME') {
+                const coords = {
+                    calendar: window.calendarCoords,
+                    pc: window.pcCoords,
+                    cabinet: window.cabinetCoords,
+                    safe: window.safeCoords,
+                    door: window.doorCoords,
+                    switch: window.switchCoords
+                };
+
+                if (coords.calendar && x > coords.calendar.x && x < coords.calendar.x + coords.calendar.w &&
+                    y > coords.calendar.y && y < coords.calendar.y + coords.calendar.h) {
+                    showCalendarPuzzle();
+                } else if (coords.pc && x > coords.pc.x && x < coords.pc.x + coords.pc.w &&
+                    y > coords.pc.y && y < coords.pc.y + coords.pc.h) {
+                    showPCPuzzle();
+                } else if (coords.cabinet && x > coords.cabinet.x && x < coords.cabinet.x + coords.cabinet.w &&
+                    y > coords.cabinet.y && y < coords.cabinet.y + coords.cabinet.h) {
+                    showCabinetPuzzle();
+                } else if (coords.safe && x > coords.safe.x && x < coords.safe.x + coords.safe.w &&
+                    y > coords.safe.y && y < coords.safe.y + coords.safe.h) {
+                    showSafePuzzle();
+                } else if (coords.door && x > coords.door.x && x < coords.door.x + coords.door.w &&
+                    y > coords.door.y && y < coords.door.y + coords.door.h) {
+                    showDoorPuzzle();
+                } else if (coords.switch && x > coords.switch.x && x < coords.switch.x + coords.switch.w &&
+                    y > coords.switch.y && y < coords.switch.y + coords.switch.h) {
+                    gameState.uvMode = !gameState.uvMode;
+                }
+            }
+        });
+
+        // ============================================
+        // MAIN GAME LOOP
+        // ============================================
+        function gameLoop() {
+            if (gameState.scene === 'TITLE') {
+                drawTitleScene();
+            } else if (gameState.scene === 'THEME_SELECT') {
+                drawThemeSelectScene();
+            } else if (gameState.scene === 'MAIN_GAME') {
+                drawMainGameScene();
+            }
+
+            updateTimer();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
