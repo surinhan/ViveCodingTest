@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방탈출 카페 - 살인마의 암실</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            font-family: '고딕체', 'Arial', sans-serif;
+            background: #000;
+            overflow: hidden;
+            cursor: default;
+            color: #fff;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scene.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #titleScene {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .title-content {
+            text-align: center;
+        }
+
+        .neon-title {
+            font-size: 80px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+            margin-bottom: 50px;
+            letter-spacing: 3px;
+            animation: neonFlicker 3s infinite;
+        }
+
+        @keyframes neonFlicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 40px #00ffff;
+                opacity: 1;
+            }
+            20%, 24%, 55% {
+                text-shadow: 0 0 5px #00ffff;
+                opacity: 0.8;
+            }
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .ui-button {
+            padding: 15px 60px;
+            font-size: 24px;
+            border: 3px solid #fff;
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .ui-button:hover {
+            color: #00ffff;
+            border-color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            transform: scale(1.1);
+        }
+
+        .ui-button:active {
+            transform: scale(0.95);
+        }
+
+        #themeSelectScene {
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%);
+            padding: 60px;
+        }
+
+        .posters-container {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            flex-wrap: wrap;
+            max-width: 1200px;
+        }
+
+        .poster {
+            width: 300px;
+            height: 400px;
+            background: #2a2a2e;
+            border: 3px solid #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .poster.active:hover {
+            brightness: 110%;
+            border-color: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+            transform: scale(1.05);
+        }
+
+        .poster.locked {
+            filter: grayscale(1);
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .locked-overlay {
+            position: absolute;
+            font-size: 32px;
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            z-index: 300;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .overlay.active {
+            display: flex;
+        }
+
+        .popup {
+            background: #1a1a1a;
+            border: 3px solid #ffff00;
+            border-radius: 10px;
+            padding: 40px;
+            max-width: 600px;
+            color: #fff;
+            animation: popupIn 0.4s ease-out;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.5);
+            z-index: 301;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        @keyframes popupIn {
+            from {
+                opacity: 0;
+                transform: scale(0.3) translateY(100px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .popup h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #ffff00;
+            text-align: center;
+        }
+
+        .popup-content {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .popup-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .popup-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: 2px solid #ffff00;
+            background: transparent;
+            color: #ffff00;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .popup-btn:hover {
+            background: #ffff00;
+            color: #000;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        input[type="text"], input[type="password"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            background: #333;
+            border: 2px solid #555;
+            color: #fff;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+            border-color: #ffff00;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+            outline: none;
+        }
+
+        .dial-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .dial {
+            width: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dial-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffff00;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .dial-button {
+            width: 50px;
+            padding: 8px;
+            font-size: 18px;
+            border: 2px solid #ffff00;
+            background: transparent;
+            color: #ffff00;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .dial-button:hover {
+            background: #ffff00;
+            color: #000;
+        }
+
+        .game-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            color: #fff;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff0000;
+        }
+
+        .inventory {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border: 2px solid #ffff00;
+            border-radius: 10px;
+            z-index: 100;
+            max-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .inventory-title {
+            color: #ffff00;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .inventory-item {
+            color: #fff;
+            padding: 5px;
+            border-bottom: 1px solid #444;
+        }
+
+        .message-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ffff00;
+            padding: 20px;
+            border-radius: 10px;
+            color: #fff;
+            max-width: 600px;
+            text-align: center;
+            z-index: 200;
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .message-box.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #ffff00;
+        }
+
+        .fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 400;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        .fade-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Title Scene -->
+        <div id="titleScene" class="scene active">
+            <div class="title-content">
+                <div class="neon-title">방탈출 카페</div>
+                <div class="button-group">
+                    <button class="ui-button" id="enterBtn">테마 입장</button>
+                    <button class="ui-button" id="settingsBtn">환경설정</button>
+                    <button class="ui-button" id="exitBtn">퇴근</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Select Scene -->
+        <div id="themeSelectScene" class="scene">
+            <div class="posters-container">
+                <div class="poster active" id="poster1">
+                    <div>살인마의 암실</div>
+                    <div style="font-size: 14px; margin-top: 20px; color: #aaa;">난이도: ★★★★</div>
+                </div>
+                <div class="poster locked">
+                    <div>Case 02</div>
+                    <div class="locked-overlay">🔒 LOCKED</div>
+                </div>
+                <div class="poster locked">
+                    <div>Case 03</div>
+                    <div class="locked-overlay">🔒 LOCKED</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Game Scene -->
+        <div id="mainGameScene" class="scene">
+            <canvas id="gameCanvas"></canvas>
+            <div class="game-hud">
+                <div>⏱️ <span class="timer">30:00</span></div>
+                <div id="gameStatus" style="margin-top: 10px;"></div>
+            </div>
+            <div class="inventory" id="inventory">
+                <div class="inventory-title">📦 소유 아이템</div>
+                <div id="inventoryList"></div>
+            </div>
+        </div>
+
+        <!-- Popups -->
+        <div class="overlay" id="themeInfoOverlay">
+            <div class="popup" id="themeInfoPopup">
+                <button class="close-btn" onclick="closeThemeInfo()">✕</button>
+                <h2>살인마의 암실</h2>
+                <div class="popup-content">
+                    <p><strong>시놉시스:</strong></p>
+                    <p>연쇄 살인마의 암실에 갇힌 형사. 방 안의 단서를 조합해 탈출하는 테마입니다.</p>
+                    <p style="margin-top: 15px;"><strong>난이도:</strong> ★★★★ (상급)</p>
+                    <p style="margin-top: 15px;"><strong>제한 시간:</strong> 30분</p>
+                    <p style="margin-top: 15px;"><strong>특징:</strong> 텍스트와 단서 조합을 통한 두뇌형 퍼즐</p>
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn" onclick="closeThemeInfo()">뒤로 가기</button>
+                    <button class="popup-btn" id="startGameBtn">테마 시작</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PC Login Popup -->
+        <div class="overlay" id="pcLoginOverlay">
+            <div class="popup" id="pcLoginPopup">
+                <button class="close-btn" onclick="closePuzzle()">✕</button>
+                <h2>💻 PC 로그인</h2>
+                <div class="popup-content">
+                    <p style="color: #aaa; margin-bottom: 15px;">4자리 숫자를 입력하세요</p>
+                    <p><strong>💡 단서:</strong></p>
+                    <p>달력에 표시된 생일: 10월 31일</p>
+                    <p style="margin-top: 10px;">UV 모드에서 보이는 메모: "생일로부터 100일째"</p>
+                    <p style="margin-top: 10px; color: #aaa; font-size: 14px;">10월 31일 + 100일 = 2월 8일</p>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="pcPassword" placeholder="0000" maxlength="4" pattern="[0-9]*">
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn" onclick="closePuzzle()">취소</button>
+                    <button class="popup-btn" onclick="submitPC()">확인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cabinet Puzzle Popup -->
+        <div class="overlay" id="cabinetOverlay">
+            <div class="popup" id="cabinetPopup">
+                <button class="close-btn" onclick="closePuzzle()">✕</button>
+                <h2>🔐 약품 캐비닛</h2>
+                <div class="popup-content">
+                    <p style="color: #aaa; margin-bottom: 15px;">5자리 알파벳을 입력하세요</p>
+                    <p><strong>💡 단서:</strong></p>
+                    <p>PC 문서: "황제는 3번 찔렸다"</p>
+                    <p style="margin-top: 10px;">→ 카이사르 암호 (알파벳 3칸 시프트)</p>
+                    <p style="margin-top: 10px;">문서의 붉은 글씨: W R A L F</p>
+                    <p style="margin-top: 10px; color: #aaa; font-size: 14px;">각 글자를 3칸 앞으로 시프트하면?</p>
+                </div>
+                <div class="dial-container" id="cabinetDials"></div>
+                <div class="popup-buttons">
+                    <button class="popup-btn" onclick="closePuzzle()">취소</button>
+                    <button class="popup-btn" onclick="submitCabinet()">확인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Safe Puzzle Popup -->
+        <div class="overlay" id="safeOverlay">
+            <div class="popup" id="safePopup">
+                <button class="close-btn" onclick="closePuzzle()">✕</button>
+                <h2>💰 소형 금고</h2>
+                <div class="popup-content">
+                    <p style="color: #aaa; margin-bottom: 15px;">4자리 숫자를 입력하세요</p>
+                    <p><strong>💡 단서:</strong></p>
+                    <p>UV 조명에서 보이는 3×3 마방진 (일부 숫자 누락)</p>
+                    <p style="margin-top: 10px;">금고 표면: "Missing Numbers + The Sum"</p>
+                    <p style="margin-top: 10px; color: #aaa; font-size: 14px;">마방진 규칙: 가로, 세로, 대각선 합 = 15</p>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="safeCode" placeholder="5215" maxlength="4" pattern="[0-9]*">
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn" onclick="closePuzzle()">취소</button>
+                    <button class="popup-btn" onclick="submitSafe()">확인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Door Lock Popup -->
+        <div class="overlay" id="doorOverlay">
+            <div class="popup" id="doorPopup">
+                <button class="close-btn" onclick="closePuzzle()">✕</button>
+                <h2>🚪 최종 탈출 - 철문 도어락</h2>
+                <div class="popup-content">
+                    <p style="color: #aaa; margin-bottom: 15px;">알파벳과 숫자를 조합해 입력하세요</p>
+                    <p><strong>💡 단서:</strong></p>
+                    <p>1. 사진 뒷면의 원소 기호 (UV 모드): As, Hg, Tl</p>
+                    <p style="margin-top: 10px;">2. 주기율표의 원자 번호:</p>
+                    <p>&nbsp;&nbsp;&nbsp;&nbsp;As(비소)=33, Hg(수은)=80, Tl(탈륨)=81</p>
+                    <p style="margin-top: 10px;">3. 약품 배합 비율: 1:2:3</p>
+                    <p style="margin-top: 10px; color: #aaa; font-size: 14px;">예: As33(×1), Hg160(×2), Tl243(×3)</p>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="doorCode" placeholder="As33Hg160Tl243" maxlength="20">
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn" onclick="closePuzzle()">취소</button>
+                    <button class="popup-btn" onclick="submitDoor()">확인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fade Overlay -->
+        <div class="fade-overlay" id="fadeOverlay"></div>
+    </div>
+
+    <script>
+        // Game State Management
+        const gameState = {
+            currentScene: 'title',
+            isInGame: false,
+            uvMode: false,
+            puzzlesCompleted: {
+                pc: false,
+                cabinet: false,
+                safe: false,
+                door: false
+            },
+            inventory: [],
+            timeRemaining: 30 * 60,
+            gameOver: false
+        };
+
+        let clickableObjects = [];
+
+        // Audio Manager
+        class SoundManager {
+            constructor() {
+                this.audioContext = null;
+                this.masterVolume = 0.3;
+            }
+
+            init() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playBell() {
+                this.playTone(800, 0.3, 0.5);
+            }
+
+            playError() {
+                this.playTone(300, 0.1, 0.3);
+            }
+
+            playSuccess() {
+                this.playTone(800, 0.15, 0.4);
+                setTimeout(() => this.playTone(1000, 0.15, 0.4), 100);
+            }
+
+            playTone(frequency, duration, volume) {
+                this.init();
+                const ctx = this.audioContext;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(volume * this.masterVolume, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + duration);
+            }
+        }
+
+        const soundManager = new SoundManager();
+
+        // Scene Management
+        function switchScene(sceneId) {
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => scene.classList.remove('active'));
+            document.getElementById(sceneId).classList.add('active');
+            gameState.currentScene = sceneId;
+        }
+
+        function fadeToBlack(callback) {
+            const overlay = document.getElementById('fadeOverlay');
+            overlay.classList.add('active');
+            setTimeout(() => {
+                if (callback) callback();
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                }, 500);
+            }, 1500);
+        }
+
+        // Title Scene Events
+        document.getElementById('enterBtn').addEventListener('click', () => {
+            soundManager.playBell();
+            fadeToBlack(() => {
+                switchScene('themeSelectScene');
+            });
+        });
+
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            alert('⚙️ 환경설정\n\n볼륨: 30%\n난이도: 상급\n사운드: ON');
+        });
+
+        document.getElementById('exitBtn').addEventListener('click', () => {
+            if (confirm('게임을 종료하시겠습니까?')) {
+                alert('방탈출 카페를 이용해주셔서 감사합니다!');
+            }
+        });
+
+        // Theme Select Events
+        document.getElementById('poster1').addEventListener('click', () => {
+            soundManager.playTone(400, 0.1, 0.3);
+            document.getElementById('themeInfoOverlay').classList.add('active');
+        });
+
+        function closeThemeInfo() {
+            document.getElementById('themeInfoOverlay').classList.remove('active');
+        }
+
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            closeThemeInfo();
+            soundManager.playTone(200, 0.2, 0.5);
+            fadeToBlack(() => {
+                switchScene('mainGameScene');
+                gameState.isInGame = true;
+                initializeGame();
+            });
+        });
+
+        // Puzzle Functions
+        function showPuzzlePopup(popupId) {
+            const overlay = document.getElementById(popupId + 'Overlay');
+            overlay.classList.add('active');
+        }
+
+        function closePuzzle() {
+            document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
+        }
+
+        function submitPC() {
+            const input = document.getElementById('pcPassword').value;
+            const answer = '0208';
+            
+            if (input === answer) {
+                soundManager.playSuccess();
+                gameState.puzzlesCompleted.pc = true;
+                gameState.inventory.push('📄 암호화된 텍스트 문서\n(황제는 3번 찔렸다)');
+                addGameMessage('✅ PC 잠금 해제! 문서를 획득했습니다.');
+                updateInventory();
+                closePuzzle();
+            } else {
+                soundManager.playError();
+                alert('❌ 비밀번호가 틀렸습니다.');
+                document.getElementById('pcPassword').value = '';
+            }
+        }
+
+        function createDialUI(id, count) {
+            const container = document.getElementById(id);
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const dial = document.createElement('div');
+                dial.className = 'dial';
+                dial.innerHTML = `
+                    <button class="dial-button" onclick="changeDialValue(this, -1)">▲</button>
+                    <div class="dial-value">A</div>
+                    <button class="dial-button" onclick="changeDialValue(this, 1)">▼</button>
+                `;
+                container.appendChild(dial);
+            }
+        }
+
+        function changeDialValue(button, direction) {
+            const valueDiv = button.parentElement.querySelector('.dial-value');
+            let current = valueDiv.textContent.charCodeAt(0) - 65;
+            current = (current + direction + 26) % 26;
+            valueDiv.textContent = String.fromCharCode(current + 65);
+        }
+
+        function submitCabinet() {
+            const dialValues = Array.from(document.querySelectorAll('#cabinetDials .dial-value'))
+                .map(div => div.textContent)
+                .join('');
+            const answer = 'TOXIC';
+            
+            if (dialValues === answer) {
+                soundManager.playSuccess();
+                gameState.puzzlesCompleted.cabinet = true;
+                gameState.inventory.push('🧪 약품 배합 비율\nAs:Hg:Tl = 1:2:3');
+                addGameMessage('✅ 캐비닛 열림! 약품 메모를 획득했습니다.');
+                updateInventory();
+                closePuzzle();
+            } else {
+                soundManager.playError();
+                alert('❌ 암호가 틀렸습니다.');
+            }
+        }
+
+        function submitSafe() {
+            const input = document.getElementById('safeCode').value;
+            const answer = '5215';
+            
+            if (input === answer) {
+                soundManager.playSuccess();
+                gameState.puzzlesCompleted.safe = true;
+                gameState.inventory.push('📊 완성된 주기율표');
+                addGameMessage('✅ 금고 열림! 주기율표를 획득했습니다.');
+                updateInventory();
+                closePuzzle();
+            } else {
+                soundManager.playError();
+                alert('❌ 암호가 틀렸습니다.');
+                document.getElementById('safeCode').value = '';
+            }
+        }
+
+        function submitDoor() {
+            const input = document.getElementById('doorCode').value.toUpperCase();
+            const answer = 'AS33HG160TL243';
+            
+            if (input === answer) {
+                soundManager.playSuccess();
+                gameState.puzzlesCompleted.door = true;
+                closePuzzle();
+                gameWin();
+            } else {
+                soundManager.playError();
+                alert('❌ 암호가 틀렸습니다.\n\n정답: As의 원자번호 × 1, Hg의 원자번호 × 2, Tl의 원자번호 × 3');
+                document.getElementById('doorCode').value = '';
+            }
+        }
+
+        // Game Functions
+        function initializeGame() {
+            gameState.timeRemaining = 30 * 60;
+            gameState.inventory = [];
+            gameState.puzzlesCompleted = { pc: false, cabinet: false, safe: false, door: false };
+            createDialUI('cabinetDials', 5);
+            updateInventory();
+            startGameTimer();
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameState.isInGame || gameState.gameOver) return;
+            renderGameScene();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function renderGameScene() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            clickableObjects = [];
+
+            // Background
+            if (gameState.uvMode) {
+                ctx.fillStyle = '#4a0080';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // UV light effects
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🔦 UV 라이트 모드', canvas.width / 2, 80);
+                
+                // Show special clues
+                ctx.fillStyle = '#00ff88';
+                ctx.font = '28px Arial';
+                ctx.fillText('벽면: 3×3 마방진 숫자 (합=15)', canvas.width / 2, canvas.height / 2 - 50);
+                ctx.fillText('사진 뒷면: As, Hg, Tl', canvas.width / 2, canvas.height / 2 + 30);
+            } else {
+                ctx.fillStyle = '#2a2a2a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('💡 일반 조명 모드', canvas.width / 2, 80);
+                ctx.font = '18px Arial';
+                ctx.fillStyle = '#aaa';
+                ctx.fillText('조명 스위치를 클릭해 UV 라이트를 켜세요', canvas.width / 2, 140);
+            }
+
+            // Draw interactive objects
+            const padding = 50;
+            drawObject(ctx, padding, 200, 140, 140, '📋 PC', 'pc');
+            drawObject(ctx, padding + 170, 200, 140, 140, '🔐 캐비닛', 'cabinet');
+            drawObject(ctx, canvas.width - padding - 140, 200, 140, 140, '💰 금고', 'safe');
+            drawObject(ctx, canvas.width / 2 - 70, canvas.height - 200, 140, 120, '💡 조명\n스위치', 'light');
+            drawObject(ctx, canvas.width - padding - 140, canvas.height - 200, 140, 120, '🚪 철문', 'door');
+        }
+
+        function drawObject(ctx, x, y, w, h, label, type) {
+            ctx.fillStyle = '#555';
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = gameState.puzzlesCompleted[type] ? '#00ff00' : '#fff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+            
+            ctx.fillStyle = gameState.puzzlesCompleted[type] ? '#00ff00' : '#fff';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x + w / 2, y + h / 2 + 30);
+
+            clickableObjects.push({ x, y, w, h, type });
+        }
+
+        function startGameTimer() {
+            const timerInterval = setInterval(() => {
+                if (!gameState.isInGame || gameState.gameOver) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                gameState.timeRemaining--;
+                updateTimer();
+                if (gameState.timeRemaining <= 0) {
+                    gameState.gameOver = true;
+                    clearInterval(timerInterval);
+                    gameOver();
+                }
+            }, 1000);
+        }
+
+        function updateTimer() {
+            const mins = Math.floor(gameState.timeRemaining / 60);
+            const secs = gameState.timeRemaining % 60;
+            document.querySelector('.timer').textContent = 
+                `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateInventory() {
+            const list = document.getElementById('inventoryList');
+            if (gameState.inventory.length === 0) {
+                list.innerHTML = '<div class="inventory-item" style="color: #aaa;">아이템 없음</div>';
+            } else {
+                list.innerHTML = gameState.inventory
+                    .map(item => `<div class="inventory-item">${item}</div>`)
+                    .join('');
+            }
+        }
+
+        function addGameMessage(message) {
+            let msgBox = document.querySelector('.message-box');
+            if (!msgBox) {
+                msgBox = document.createElement('div');
+                msgBox.className = 'message-box';
+                document.body.appendChild(msgBox);
+            }
+            msgBox.textContent = message;
+            msgBox.classList.add('active');
+            setTimeout(() => msgBox.classList.remove('active'), 3000);
+        }
+
+        document.getElementById('gameCanvas').addEventListener('click', (e) => {
+            if (!gameState.isInGame || clickableObjects.length === 0) return;
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            for (let obj of clickableObjects) {
+                if (clickX > obj.x && clickX < obj.x + obj.w &&
+                    clickY > obj.y && clickY < obj.y + obj.h) {
+                    handleObjectClick(obj.type);
+                    break;
+                }
+            }
+        });
+
+        function handleObjectClick(type) {
+            if (type === 'light') {
+                gameState.uvMode = !gameState.uvMode;
+                addGameMessage(gameState.uvMode ? '🔦 UV 라이트 ON' : '💡 일반 조명 ON');
+            } else if (type === 'pc' && !gameState.puzzlesCompleted.pc) {
+                showPuzzlePopup('pcLogin');
+            } else if (type === 'cabinet' && !gameState.puzzlesCompleted.cabinet) {
+                showPuzzlePopup('cabinet');
+            } else if (type === 'safe' && !gameState.puzzlesCompleted.safe) {
+                showPuzzlePopup('safe');
+            } else if (type === 'door' && !gameState.puzzlesCompleted.door) {
+                showPuzzlePopup('door');
+            } else if (type === 'door' && gameState.puzzlesCompleted.door) {
+                addGameMessage('🔓 이미 열려있습니다!');
+            } else {
+                addGameMessage('🔒 아직 잠겨있습니다.');
+            }
+        }
+
+        function gameWin() {
+            gameState.gameOver = true;
+            gameState.isInGame = false;
+            const elapsedTime = 30 * 60 - gameState.timeRemaining;
+            const mins = Math.floor(elapsedTime / 60);
+            const secs = elapsedTime % 60;
+            
+            addGameMessage('🎉 탈출 성공!');
+            setTimeout(() => {
+                alert('🎊 축하합니다!\n\n탈출 시간: ' + mins + '분 ' + secs + '초');
+                switchScene('titleScene');
+                gameState.isInGame = false;
+            }, 2000);
+        }
+
+        function gameOver() {
+            gameState.isInGame = false;
+            alert('⏰ 시간 초과!\n\n게임 오버');
+            switchScene('titleScene');
+        }
+
+        console.log('🎮 게임 로드됨! "테마 입장"을 클릭하세요.');
+    </script>
+</body>
+</html>

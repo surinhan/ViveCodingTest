@@ -366,11 +366,29 @@
             color: #000;
             box-shadow: 0 0 20px #44ff44;
         }
+
+        .fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 350;
+            transition: opacity 0.75s ease;
+        }
+
+        .fade-overlay.active {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
     <div class="timer" id="timer"></div>
+    <div id="fadeOverlay" class="fade-overlay"></div>
     
     <div id="popupOverlay" class="popup-overlay">
         <div id="popup" class="popup"></div>
@@ -393,6 +411,10 @@
         const gameState = {
             scene: 'TITLE',
             uvMode: false,
+            isTransitioning: false,
+            hoverTarget: null,
+            hoverNotice: '',
+            hoverNoticeUntil: 0,
             timeRemaining: 600, // 10분
             gameStartTime: null,
             solvedPuzzles: {
@@ -408,6 +430,125 @@
                 photoEvidence: []
             }
         };
+
+        const mouseState = {
+            x: -1,
+            y: -1
+        };
+
+        function pointInRect(px, py, rect) {
+            return px > rect.x && px < rect.x + rect.w && py > rect.y && py < rect.y + rect.h;
+        }
+
+        function findTitleHoverTarget() {
+            return window.buttonCoords?.find(btn => pointInRect(mouseState.x, mouseState.y, btn)) || null;
+        }
+
+        function findPosterHoverTarget() {
+            return window.posterCoords?.find(
+                poster => mouseState.x > poster.x - 80 && mouseState.x < poster.x + 80 &&
+                    mouseState.y > poster.y - 120 && mouseState.y < poster.y + 120
+            ) || null;
+        }
+
+        function updateCanvasCursor() {
+            let interactive = false;
+            if (gameState.scene === 'TITLE') {
+                interactive = !!findTitleHoverTarget();
+            } else if (gameState.scene === 'THEME_SELECT') {
+                interactive = !!findPosterHoverTarget();
+            } else if (gameState.scene === 'MAIN_GAME') {
+                const coords = {
+                    calendar: window.calendarCoords,
+                    pc: window.pcCoords,
+                    cabinet: window.cabinetCoords,
+                    safe: window.safeCoords,
+                    door: window.doorCoords,
+                    switch: window.switchCoords
+                };
+                interactive = Object.values(coords).some(rect => rect && pointInRect(mouseState.x, mouseState.y, rect));
+            }
+            canvas.style.cursor = interactive ? 'pointer' : 'default';
+        }
+
+        function startSceneTransition(nextScene, callback) {
+            if (gameState.isTransitioning) {
+                return;
+            }
+            gameState.isTransitioning = true;
+            const overlay = document.getElementById('fadeOverlay');
+            overlay.classList.add('active');
+
+            setTimeout(() => {
+                gameState.scene = nextScene;
+                if (callback) {
+                    callback();
+                }
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    gameState.isTransitioning = false;
+                }, 300);
+            }, 750);
+        }
+
+        function showThemeInfoPopup() {
+            const content = `
+                <h2>Case 01: 살인마의 암실</h2>
+                <div class="popup-content">
+                    연쇄 살인마의 암실에 갇힌 형사가 되어 제한 시간 안에 단서를 조합해 탈출해야 합니다.<br><br>
+                    난이도: <strong style="color:#ff4444;">상</strong><br>
+                    예상 플레이타임: 10분
+                </div>
+                <div class="button-group">
+                    <button class="submit-btn" onclick="startSelectedTheme()">테마 시작</button>
+                    <button class="cancel-btn" onclick="closePopup()">뒤로 가기</button>
+                </div>
+            `;
+            showPopup(content);
+        }
+
+        function startSelectedTheme() {
+            closePopup();
+            startSceneTransition('MAIN_GAME', () => {
+                gameState.gameStartTime = null;
+                gameState.timeRemaining = 600;
+            });
+        }
+
+        function showSettingsPopup() {
+            const content = `
+                <h2>환경설정</h2>
+                <div class="popup-content">
+                    사운드와 난이도는 현재 데모 고정값으로 동작합니다.<br><br>
+                    볼륨: 30%<br>
+                    난이도: 상급<br>
+                    사운드: ON
+                </div>
+                <button class="cancel-btn" onclick="closePopup()">닫기</button>
+            `;
+            showPopup(content);
+        }
+
+        function showExitPopup() {
+            const content = `
+                <h2>퇴근</h2>
+                <div class="popup-content">
+                    오늘의 영업을 종료하시겠습니까?<br><br>
+                    종료를 선택하면 타이틀 화면에 머무른 채 안내 문구를 표시합니다.
+                </div>
+                <div class="button-group">
+                    <button class="submit-btn" onclick="confirmExit()">종료</button>
+                    <button class="cancel-btn" onclick="closePopup()">취소</button>
+                </div>
+            `;
+            showPopup(content);
+        }
+
+        function confirmExit() {
+            closePopup();
+            gameState.hoverNotice = '이 브라우저에서는 스크립트로 창을 닫을 수 없습니다.';
+            gameState.hoverNoticeUntil = Date.now() + 2200;
+        }
 
         // ============================================
         // DRAWING FUNCTIONS - TITLE SCENE
@@ -442,11 +583,21 @@
                 { y: 560, text: '[퇴근]' }
             ];
 
+            const hoveredButton = findTitleHoverTarget();
+
             buttons.forEach(btn => {
-                ctx.fillStyle = '#fff';
-                ctx.font = '28px Arial';
+                const isHover = hoveredButton && hoveredButton.y === btn.y - 30;
+                ctx.fillStyle = isHover ? '#00ffff' : '#fff';
+                ctx.font = `bold ${isHover ? 31 : 28}px Arial`;
+                if (isHover) {
+                    ctx.shadowColor = '#00ffff';
+                    ctx.shadowBlur = 12;
+                }
                 ctx.textAlign = 'center';
                 ctx.fillText(btn.text, canvas.width / 2, btn.y);
+                if (isHover) {
+                    ctx.shadowBlur = 0;
+                }
             });
 
             window.buttonCoords = buttons.map((btn, i) => ({
@@ -490,8 +641,17 @@
                 { x: canvas.width - 250, y: 300, locked: true, title: '????', case: '03' }
             ];
 
+            const hoveredPoster = findPosterHoverTarget();
+
             posters.forEach((poster, idx) => {
                 ctx.save();
+                const isHover = hoveredPoster && hoveredPoster.case === poster.case;
+                const shake = poster.locked && isHover ? Math.sin(Date.now() / 35) * 5 : 0;
+                const scale = !poster.locked && isHover ? 1.05 : 1;
+                ctx.translate(poster.x + shake, poster.y);
+                ctx.scale(scale, scale);
+                ctx.translate(-poster.x, -poster.y);
+
                 const frameColor = poster.locked ? '#666' : '#ffff00';
                 ctx.strokeStyle = frameColor;
                 ctx.lineWidth = 3;
@@ -502,9 +662,12 @@
                 if (poster.locked) {
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                     ctx.fillRect(poster.x - 80, poster.y - 120, 160, 240);
+                    ctx.fillStyle = '#ff6666';
+                    ctx.font = 'bold 15px Arial';
+                    ctx.fillText('LOCKED', poster.x, poster.y + 12);
                 } else {
                     ctx.shadowColor = '#ff0000';
-                    ctx.shadowBlur = 20;
+                    ctx.shadowBlur = isHover ? 34 : 20;
                     ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
                     ctx.fillRect(poster.x - 80, poster.y - 120, 160, 240);
                     ctx.shadowBlur = 0;
@@ -520,6 +683,13 @@
 
                 ctx.restore();
             });
+
+            if (gameState.hoverNoticeUntil > Date.now()) {
+                ctx.fillStyle = '#ff6666';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(gameState.hoverNotice, canvas.width / 2, canvas.height - 40);
+            }
 
             window.posterCoords = posters;
         }
@@ -964,7 +1134,7 @@
         function submitPCPassword() {
             const input = document.getElementById('pcInput').value;
             
-            if (input === '0208') {
+            if (input === '0508') {
                 document.getElementById('pcMessage').innerHTML = '<div class="success-message">✓ 정답! PC가 잠금 해제되었습니다.</div>';
                 gameState.solvedPuzzles.pc = true;
                 gameState.obtainedItems.pcDocument = true;
@@ -1119,7 +1289,7 @@
                 <div class="hint-box">
                     <strong>💡 최종 단서:</strong><br>
                     사진 1 (급성중독) → As (비소)<br>
-                    사진 2 (신경이상) → Hg (수간)<br>
+                    사진 2 (신경이상) → Hg (수은)<br>
                     사진 3 (호흡곤란) → Tl (탈륨)<br><br>
                     배합 비율: 1:2:3 적용
                 </div>
@@ -1190,6 +1360,10 @@
         // MOUSE INTERACTION
         // ============================================
         canvas.addEventListener('click', (e) => {
+            if (gameState.isTransitioning) {
+                return;
+            }
+
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -1198,16 +1372,23 @@
                 window.buttonCoords?.forEach(btn => {
                     if (x > btn.x && x < btn.x + btn.w && y > btn.y && y < btn.y + btn.h) {
                         if (btn.action === 'THEME_SELECT') {
-                            gameState.scene = 'THEME_SELECT';
+                            startSceneTransition('THEME_SELECT');
+                        } else if (btn.action === 'SETTINGS') {
+                            showSettingsPopup();
+                        } else if (btn.action === 'EXIT') {
+                            showExitPopup();
                         }
                     }
                 });
             } else if (gameState.scene === 'THEME_SELECT') {
                 window.posterCoords?.forEach((poster, idx) => {
-                    if (!poster.locked && 
-                        x > poster.x - 80 && x < poster.x + 80 &&
-                        y > poster.y - 120 && y < poster.y + 120) {
-                        gameState.scene = 'MAIN_GAME';
+                    const isHit = x > poster.x - 80 && x < poster.x + 80 &&
+                        y > poster.y - 120 && y < poster.y + 120;
+                    if (isHit && !poster.locked) {
+                        showThemeInfoPopup();
+                    } else if (isHit && poster.locked) {
+                        gameState.hoverNotice = '아직 잠긴 테마입니다.';
+                        gameState.hoverNoticeUntil = Date.now() + 1200;
                     }
                 });
             } else if (gameState.scene === 'MAIN_GAME') {
@@ -1242,6 +1423,18 @@
             }
         });
 
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseState.x = e.clientX - rect.left;
+            mouseState.y = e.clientY - rect.top;
+        });
+
+        popupOverlay.addEventListener('click', (e) => {
+            if (e.target === popupOverlay) {
+                closePopup();
+            }
+        });
+
         // ============================================
         // MAIN GAME LOOP
         // ============================================
@@ -1255,6 +1448,7 @@
             }
 
             updateTimer();
+            updateCanvasCursor();
             requestAnimationFrame(gameLoop);
         }
 
